@@ -1,0 +1,120 @@
+# Contributing Guidelines
+
+Thank you for your interest in contributing to the MedDRA-Upversioning tool. Reading and following the guidelines below will make the contribution process easy and effective for everyone involved.
+
+To get an overview of the project and its technical aspects, please see the [README](README.md).
+
+We take our contributors seriously and hold our community to high standards of communication. Anyone who interacts must confront the basic responsibility of not being a jerk. Stay polite and focus the discussions on the project and the technical aspects. By participating and contributing to this project, you agree to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Contents
+
+- [Vision of the Project](#vision-for-the-project)
+- [The Types of Contributions we are Looking for](#the-types-of-contributions-we-are-looking-for)
+- [Contributrion Workflow](#contributrion-workflow)
+- [Issues](#issues)
+- [Pull Requests](#pull-requests)
+- [Writing Commit Messages](#writing-commit-messages)
+- [Where Can I Get Help](#where-can-i-get-help)
+- [How to Setup your Environment](#how-to-setup-your-environment)
+
+### Reasons for making the project open source
+
+This project open source to be fully transparent and give users the ability to voice their concerns in the spirit of continuous improvement. 
+
+## The types of contributions we are looking for
+
+Please review [README](README.md) to get an overview of the technical aspect of the calculations performed by the app. 
+
+In order to continuously improve the macro, please contribute if...
+* You believe the macro should work differently. 
+* You find an error in the code
+
+## Coding Style
+
+Consistency is the most important. Following the existing style, formatting, and naming conventions of the file you are modifying and of the overall project. Failure to do so will result in a prolonged review process that has to focus on updating the superficial aspects of your code, rather than improving its functionality and performance.
+
+For example, if methods are named using camelcase, like thisIsMyNewMethod, then do not diverge from that by writing this_is_my_new_method. You get the idea. If in doubt, please ask or search the codebase for something similar.
+
+## Contributrion workflow
+
+Contributions are made to this repo via [Discussions](https://docs.github.com/en/discussions) -> [Issues](https://docs.github.com/en/pull-requests) -> [Pull Requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) (PRs).
+
+### Discussions
+
+Open a Discussion before opening an Issue and PR to get a general impression of your idea from fellow contributors. Issues with supporting discussion are more likely to lead to an approved PR and gets merged to the main branch.Search for existing Discussions, Issues and PRs before creating your own.
+Select the discussion category "Ideas" to present your idea and suggest new features.
+
+### Issues
+
+Issues should be used to follow up on a Discussion to report problems, request a new feature, or to discuss potential changes before a PR is created. When you create a new Issue, a template will be loaded that will guide you through collecting and providing the information we need to investigate. Please provide reference for your claims and ensure it is peer-reviewed material. Unsupported claims will not be considered.
+
+If you find an Issue that addresses your problem, please add your own information to the existing issue rather than creating a new one.
+
+If you find a closed issue about your problem, please open a new issue and reference the closed issue in your description.
+
+### Pull Requests
+
+PRs to our libraries are always welcome but it's best to open a Discussion and Issue to discuss your proposal first. Otherwise, you risk doing a lot of work for nothing!  
+
+In general, PRs should:
+
+* Smaller is better. Submit one pull request per bug fix or feature. A pull request should contain isolated changes pertaining to a single bug fix or feature implementation. Do not refactor or reformat code that is unrelated to your change. It is better to submit many small pull requests rather than a single large one. Enormous pull requests will take enormous amounts of time to review, or may be rejected altogether.
+
+* Prioritize understanding over cleverness. Write code clearly and concisely. Remember that source code usually gets written once and read often. Ensure the code is clear to the reader. The purpose and logic should be obvious to a reasonably skilled developer, otherwise you should add a comment that explains it.
+
+* Follow existing coding style and conventions. Keep your code consistent with the style, formatting, and conventions in the rest of the code base. When possible, these will be enforced with a linter. Consistency makes it easier to review and modify in the future.
+
+## Writing Commit Messages
+
+Please [write a great commit message](https://chris.beams.io/posts/git-commit/).
+
+1. Separate subject from body with a blank line
+2. Limit the subject line to 50 characters
+3. Capitalize the subject line
+4. Do not end the subject line with a period
+5. Use the imperative mood in the subject line (example: "Fix networking issue")
+6. Wrap the body at about 72 characters
+7. Use the body to explain **why**, *not what and how* (the code shows that!)
+8. If applicable, prefix the title with the relevant component name. (examples: "[Docs] Fix typo")
+
+## Where can I get help
+
+If you can't find the answer to your question you can ask it directly to adam.beauregard@xlsmetrics.com
+
+## How to setup your environment
+
+In order to make updates to the youlldie code, you must be able to use R. If you don't already use R, please refer to [The R Project for Statistical Computing](https://www.r-project.org) to install R and get started. 
+
+Shiny is an R package used to build web apps straight from R. In order to use shiny, you must set it up in R. Please refer to the follow [Shiny Learning Resources](https://shiny.rstudio.com/tutorial/#get-started) to get started using r-shiny.
+ 
+You will need to install and load the following packages in you R environment in order to run the youlldie shiny app. Simply copy-paste the lines below into R to have those packages installed and loaded.
+
+```
+#Install required packages:
+install.packages(tidyverse)
+install.packages(skimr)
+install.packages(haven)
+install.packages(dplyr)
+install.packages(chron)
+install.packages(data.table)
+install.packages(readxl)
+install.packages(writexl)
+install.packages(openxlsx)
+install.packages(here)
+install.packages(rlang)
+install.packages(arsenal)
+
+#load required packages:
+library(tidyverse)
+library(skimr)
+library(haven)
+library(dplyr)
+library(chron)
+library(data.table)
+library(readxl)
+library(writexl)
+library(openxlsx)
+library(here)
+library(rlang)
+library(arsenal)
+```
