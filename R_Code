@@ -26,10 +26,10 @@ setwd("//sassysprd.bmrn.com/datashare/cdm/bmn111/ach/111301/csr/dataoper")
 ae <- read_sas("ae.sas7bdat")
 
 # ///////////////////////////////////////////////////////////////////////////////
-# Create an AE.csv file that meets the criteria for loading into MVAT ///////////
+### Create an AE.csv file that meets the criteria for loading into MVAT /////////
 # ///////////////////////////////////////////////////////////////////////////////
 
-#stack LLT and PT:
+# stack LLT and PT:
 mvat_ae_llt <- ae[c("AELLT","AELLTCD")]
 mvat_ae_llt <- mvat_ae_llt %>% rename (`LLT/PT Term`=AELLT,`LLT/PT Code`=AELLTCD)
 
@@ -38,7 +38,7 @@ mvat_ae_pt <- mvat_ae_pt %>% rename (`LLT/PT Term`=AEDECOD,`LLT/PT Code`=AEPTCD)
 
 mvat_ae <- rbind(mvat_ae_llt, mvat_ae_pt)
 
-#keep only unique records (remove duplicates)
+# keep only unique records (remove duplicates)
 mvat_ae <- as.data.table(mvat_ae)
 mvat_ae <- mvat_ae[, ID := sequence(.N), by = "LLT/PT Code"]
 mvat_ae <- subset(mvat_ae, ID=="1")
@@ -71,12 +71,12 @@ di_MedDRA_Term_Name_Changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_
 di_MedDRA_Code_Switches <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="MedDRA Code Switches")
 
 # ------------------------------------------------------------------------------
-# Create Upversionned AE dataset -----------------------------------------------
+### Create Upversionned AE dataset -----------------------------------------------
 # ------------------------------------------------------------------------------
 
 
 # //////////////////////////////////////////////////////////////////////////////
-# Updating the AE dataset from the 'Promotions' Sheet //////////////////////////
+## Updating the AE dataset from the 'Promotions' Sheet //////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # Renaming + reformatting to AELLTCD char for joining purpose.
@@ -113,7 +113,7 @@ for (var in names(ae_uv)) {
 
 
 # //////////////////////////////////////////////////////////////////////////////
-# Updating the AE dataset from the 'Demotions' Sheet ///////////////////////////
+## Updating the AE dataset from the 'Demotions' Sheet ///////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # Renaming + reformatting to AEPTCD char for joining purpose.
@@ -162,7 +162,7 @@ for (var in names(ae_uv)) {
 }
 
 # //////////////////////////////////////////////////////////////////////////////
-# Updating the AE dataset from the 'LLTs under different PTs' Sheet ////////////
+## Updating the AE dataset from the 'LLTs under different PTs' Sheet ////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # Renaming + reformatting to AELLTCD char for joining purpose.
@@ -199,7 +199,7 @@ for (var in names(ae_uv)) {
 
 
 # //////////////////////////////////////////////////////////////////////////////
-# Updating the AE dataset from the 'LLT SOC Changes' Sheet /////////////////////
+## Updating the AE dataset from the 'LLT SOC Changes' Sheet /////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # Keep only the records on di_LLT_SOC_Changes where Change Type = "Primary SOC Change"
@@ -239,7 +239,7 @@ for (var in names(ae_uv)) {
 
 
 # //////////////////////////////////////////////////////////////////////////////
-# Updating the AE dataset from the 'PT SOC Changes' Sheet //////////////////////
+## Updating the AE dataset from the 'PT SOC Changes' Sheet //////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # Keep only the records on di_LLT_SOC_Changes where Change Type = "Primary SOC Change"
@@ -279,7 +279,7 @@ for (var in names(ae_uv)) {
 
 
 # //////////////////////////////////////////////////////////////////////////////
-# Updating the AE dataset from the 'MedDRA Term Name Changes' Sheet ////////////
+## Updating the AE dataset from the 'MedDRA Term Name Changes' Sheet ////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # Remaining + reformatting the columns for the NEWTERM to be able to reference them in case_when()
@@ -374,7 +374,7 @@ ae_uv <- ae %>%
   )
 
 # //////////////////////////////////////////////////////////////////////////////
-# FINALIZE UPVERSIONED DATASET  ////////////////////////////////////////////////
+## FINALIZE UPVERSIONED DATASET  ////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # RESTORE AE VARIABLES //////////////
@@ -390,8 +390,9 @@ for (var in names(ae_uv)) {
 # Write the final up-versionned ae dataset in SAS format (.sas7bdat) to the output folder
 write_sas(ae_uv, sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/ae_uv_%s.sas7bdat",Sys.Date()))
 
+
 # //////////////////////////////////////////////////////////////////////////////
-# Compare original ae vs up-versionned ae datasets an create report ////////////
+## Compare original ae vs up-versionned ae datasets an create report ////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 comparison <- comparedf(ae, ae_uv)
