@@ -20,7 +20,7 @@ library(arsenal)
 # Read in & prepare data ---
 
 # Point to location where the AE dataset to be upversionned is
-setwd("insert_working_directory_url_here")
+setwd("//sassysprd.bmrn.com/datashare/cdm/bmn111/ach/111301/csr/dataoper")
 
 # Read in AE dataset
 ae <- read_sas("ae.sas7bdat")
@@ -49,26 +49,26 @@ mvat_ae <- mvat_ae[c("LLT/PT Term","LLT/PT Code")]
 mvat_ae <- tibble::rowid_to_column(mvat_ae, "Row ID")
 
 # Write .csv file
-write_xlsx(mvat_ae, sprintf("insert_output_directory_url_here",Sys.Date()))
+write_xlsx(mvat_ae, sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/mvat_ae_%s.xlsx",Sys.Date()))
 
 # load the .xlsx file created above into the MVAT tool to create the DI Report 
 # (See MedDRA Dictionary up-versioning user guide )
 # Once the DI Report is created and exported from MVAT 
-# Place the DI Report in the working directory from which it will be pulled (e.g.: R/data)
+# Place the DI Report in the working directory (e.g.: R_for_BMRN/data)
 # Change the DI Report file name to mvatYYYYMMDD.
 # Update the DI Report file name in the 8 lines of code below
 # Read in the DI Report's individual worksheets
 
 setwd("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN")
 
-di_Promotions <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="Promotions")
-di_Demotions <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="Demotions")
-di_LLTs_under_diff_PTs <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="LLTs under different PTs")
-di_Comprehensive_LLT_changes <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="Comprehensive LLT Changes")
-di_LLT_SOC_Changes <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="LLT (excl PT) Primary SOC Chg")
-di_PT_SOC_Changes <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="PT Primary SOC Changes")
-di_MedDRA_Term_Name_Changes <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="MedDRA Term Name Changes")
-di_MedDRA_Code_Switches <- read_excel(here("R/data", "mvat20250814.xlsx"),sheet="MedDRA Code Switches")
+di_Promotions <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="Promotions")
+di_Demotions <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="Demotions")
+di_LLTs_under_diff_PTs <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="LLTs under different PTs")
+di_Comprehensive_LLT_changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="Comprehensive LLT Changes")
+di_LLT_SOC_Changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="LLT (excl PT) Primary SOC Chg")
+di_PT_SOC_Changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="PT Primary SOC Changes")
+di_MedDRA_Term_Name_Changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="MedDRA Term Name Changes")
+di_MedDRA_Code_Switches <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="MedDRA Code Switches")
 
 # ------------------------------------------------------------------------------
 # Create Upversionned AE dataset -----------------------------------------------
@@ -373,6 +373,9 @@ ae_uv <- ae %>%
     )
   )
 
+# //////////////////////////////////////////////////////////////////////////////
+# FINALIZE UPVERSIONED DATASET  ////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
 
 # RESTORE AE VARIABLES //////////////
 
@@ -384,11 +387,8 @@ for (var in names(ae_uv)) {
   attr(ae_uv[[var]], "label") <- attr(ae[[var]], "label")
 }
 
-
 # Write the final up-versionned ae dataset in SAS format (.sas7bdat) to the output folder
-
 write_sas(ae_uv, sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/ae_uv_%s.sas7bdat",Sys.Date()))
-
 
 # //////////////////////////////////////////////////////////////////////////////
 # Compare original ae vs up-versionned ae datasets an create report ////////////
@@ -405,7 +405,7 @@ diff_table <- diff_table %>%
 
 # Create report in excel format
 # Update url to point to your outpur folder
-write_xlsx(diff_table, sprintf("insert_output_directory_url_here/ae_upversion_compare_%s.xlsx",Sys.Date()))
+write_xlsx(diff_table, sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/ae_upversion_compare_%s.xlsx",Sys.Date()))
 
 # View summary
 summary(comparison)
@@ -419,4 +419,5 @@ print(comparison)
 # END OF THE CODE /////////////////////////////////////////////////////////////
 # /////////////////////////////////////////////////////////////////////////////
 # /////////////////////////////////////////////////////////////////////////////
+
 
