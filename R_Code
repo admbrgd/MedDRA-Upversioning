@@ -1,6 +1,6 @@
 # This script is used to perform MedDRA Dictionary up-versioning on individual AE datasets
 # It uses MedDRA's Version Analysis Tool (MVAT) output: Data Impact (DI) report
-# See MedDRA Dictionary up-versioning user guide for creating the DI report
+# See MedDRA Dictionary up-versioning Job Aid for creating the DI report
 
 # Load packages ---
 
@@ -16,14 +16,95 @@ library(openxlsx)
 library(here)
 library(rlang)
 library(arsenal)
+library(readr)
 
 # Read in & prepare data ---
 
 # Point to location where the AE dataset to be upversionned is
-setwd("//sassysprd.bmrn.com/datashare/cdm/bmn111/ach/111301/csr/dataoper")
+# setwd("//sassysprd.bmrn.com/datashare/cdm/bmn111/ach/111301/csr/dataoper")
+setwd("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/data")
 
-# Read in AE dataset
+# Read in the original AE dataset
 ae <- read_sas("ae.sas7bdat")
+
+# //////////////////////////////////////////////////////////////////////////////
+# Rename variables to match standard naming convention (if needed)
+# //////////////////////////////////////////////////////////////////////////////
+#ae <- ae %>%
+#  rename(
+#    AEHLGT   = AETERM_HLGT,
+#    AEHLGTCD = AETERM_HLGT_CODE,
+#    AEHLT    = AETERM_HLT,
+#    AEHLTCD  = AETERM_HLT_CODE,
+#    AELLT    = AETERM_LLT,
+#    AELLTCD  = AETERM_LLT_CODE,
+#    AEDECOD  = AETERM_PT,
+#    AEPTCD   = AETERM_PT_CODE,
+#    AESOC    = AETERM_SOC,
+#    AESOCCD  = AETERM_SOC_CODE
+#  )
+
+# //////////////////////////////////////////////////////////////////////////////
+#  Read in the MedDRA Dictionary Target (Ending) Version Full Hierarchy
+# //////////////////////////////////////////////////////////////////////////////
+
+# ACTIONS THAT NEED TO BE PERFORMED:
+# Download the MedDRA Hierarchy MedAscii file "mdhier.asc" corresponding the
+# Target (Ending) Version From the following url: https://www.meddra.org/software-packages
+# Locate the complete MedDRA Hierarchy MedAscii file "mdhier.asc" in the
+# downloaded zip file and copy the file into the working directory set below.
+
+setwd("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN")
+
+MedDRA_mdhier <- read_delim(
+  here("R_for_BMRN/data","mdhier.asc"),
+  delim = "$",
+  col_names = FALSE,
+  locale = locale(encoding = "ISO-8859-1"),
+  show_col_types = FALSE
+)
+
+# Rename Variables
+colnames(MedDRA_mdhier) <- c(
+  "PTCD",
+  "HLTCD",
+  "HLGTCD",
+  "SOCCD",
+  "PT",
+  "HLT",
+  "HLGT",
+  "SOC",
+  "soc_abbrev",
+  "null_field",
+  "pt_soc_code",
+  "primary_soc_fg"
+)
+
+# Keep only non blank colums:
+MedDRA_mdhier <- MedDRA_mdhier[c(
+  "PTCD",
+  "HLTCD",
+  "HLGTCD",
+  "SOCCD",
+  "PT",
+  "HLT",
+  "HLGT",
+  "SOC",
+  "soc_abbrev",
+  "null_field",
+  "pt_soc_code",
+  "primary_soc_fg"
+)]
+
+# keep only Primary SOC
+MedDRA_mdhier <- subset(MedDRA_mdhier, primary_soc_fg == "Y")
+
+# Enforce uniqueness by PTCD to avoid duplicates and creation of new records
+MedDRA_mdhier <- MedDRA_mdhier %>%
+  mutate(PTCD = as.character(PTCD)) %>%
+  arrange(PTCD) %>%
+  distinct(PTCD, .keep_all = TRUE) %>%
+  mutate(across(c(PTCD, HLTCD, HLGTCD, SOCCD, PT, HLT, HLGT, SOC), as.character))
 
 # ///////////////////////////////////////////////////////////////////////////////
 ### Create an AE.csv file that meets the criteria for loading into MVAT /////////
@@ -48,377 +129,321 @@ mvat_ae <- as.data.frame(mvat_ae)
 mvat_ae <- mvat_ae[c("LLT/PT Term","LLT/PT Code")]
 mvat_ae <- tibble::rowid_to_column(mvat_ae, "Row ID")
 
-# Write .csv file
-write_xlsx(mvat_ae, sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/mvat_ae_%s.xlsx",Sys.Date()))
+# Write .xlsx file
+write_xlsx(
+  mvat_ae,
+  sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/mvat_ae%s.xlsx", Sys.Date())
+)
 
-# load the .xlsx file created above into the MVAT tool to create the DI Report 
-# (See MedDRA Dictionary up-versioning user guide )
-# Once the DI Report is created and exported from MVAT 
-# Place the DI Report in the working directory (e.g.: R_for_BMRN/data)
-# Change the DI Report file name to mvatYYYYMMDD.
-# Update the DI Report file name in the 8 lines of code below
-# Read in the DI Report's individual worksheets
+# ///////////////////////////////////////////////////////////////////////////////
+# Load the DI Report exported from MVAT (update file name as needed)
+# ///////////////////////////////////////////////////////////////////////////////
 
 setwd("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN")
 
-di_Promotions <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="Promotions")
-di_Demotions <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="Demotions")
-di_LLTs_under_diff_PTs <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="LLTs under different PTs")
-di_Comprehensive_LLT_changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="Comprehensive LLT Changes")
-di_LLT_SOC_Changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="LLT (excl PT) Primary SOC Chg")
-di_PT_SOC_Changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="PT Primary SOC Changes")
-di_MedDRA_Term_Name_Changes <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="MedDRA Term Name Changes")
-di_MedDRA_Code_Switches <- read_excel(here("R_for_BMRN/data", "mvat20250814_v2_vs_28.xlsx"),sheet="MedDRA Code Switches")
+TARGET_MEDDRA_VERSION <- "28.1"
+
+di_Promotions <- read_excel(here("R_for_BMRN/data", "mvat202602232254105316.xlsx"), sheet="Promotions")
+di_Demotions  <- read_excel(here("R_for_BMRN/data", "mvat202602232254105316.xlsx"), sheet="Demotions")
+di_LLTs_under_diff_PTs <- read_excel(here("R_for_BMRN/data", "mvat202602232254105316.xlsx"), sheet="LLTs under different PTs")
+di_MedDRA_Term_Name_Changes <- read_excel(here("R_for_BMRN/data", "mvat202602232254105316.xlsx"), sheet="MedDRA Term Name Changes")
+di_MedDRA_Code_Switches <- read_excel(here("R_for_BMRN/data", "mvat202602232254105316.xlsx"), sheet="MedDRA Code Switches")
+di_LLT_and_PT_Hierarchy_Changes <- read_excel(here("R_for_BMRN/data", "mvat202602232254105316.xlsx"), sheet="LLT and PT Hierarchy Changes")
 
 # ------------------------------------------------------------------------------
-### Create Upversionned AE dataset -----------------------------------------------
+### Create Upversionned AE dataset ---------------------------------------------
 # ------------------------------------------------------------------------------
 
+# Row audit (baseline)
+row_audit <- tibble(
+  step = "original",
+  n    = nrow(ae)
+)
 
-# //////////////////////////////////////////////////////////////////////////////
-## Updating the AE dataset from the 'Promotions' Sheet //////////////////////////
-# //////////////////////////////////////////////////////////////////////////////
-
-# Renaming + reformatting to AELLTCD char for joining purpose.
-colnames(di_Promotions)[1] <- "AELLTCD"
-di_Promotions$AELLTCD <- as.character(di_Promotions$AELLTCD)
-
-# Remaining + reformatting the columns below to be able to reference them in case_when()
-colnames(di_Promotions)[5] <- "PROMOTEDTOPTCD"
-di_Promotions$PROMOTEDTOPTCD <- as.character(di_Promotions$PROMOTEDTOPTCD)
-colnames(di_Promotions)[6] <- "PROMOTEDTOPT"
-di_Promotions$PROMOTEDTOPT <- as.character(di_Promotions$PROMOTEDTOPT)
-
-# Join to ae dataset to find LLTCD match and assign new PT (AEDECOD) and PTCode (AEPTCD) if matches
-ae_uv <- ae %>%
-  left_join(di_Promotions, by="AELLTCD") %>%
-  mutate(
-    AEDECOD = case_when(
-      !is.na(`PROMOTEDTOPTCD`) ~ as.character(`AELLT`),
-      TRUE ~ AEDECOD
-    ),
-    AEPTCD = case_when(
-      !is.na(`PROMOTEDTOPT`) ~ as.character(`AELLTCD`),
-      TRUE ~ AEPTCD
-    )
+log_n <- function(df, step) {
+  row_audit <<- bind_rows(
+    row_audit,
+    tibble(step = step, n = nrow(df))
   )
-
-# Restore ae variable names
-ae_uv <- ae_uv %>%
-  select(names(ae))
-# Restore labels
-for (var in names(ae_uv)) {
-  attr(ae_uv[[var]], "label") <- attr(ae[[var]], "label")
-}
-
-
-# //////////////////////////////////////////////////////////////////////////////
-## Updating the AE dataset from the 'Demotions' Sheet ///////////////////////////
-# //////////////////////////////////////////////////////////////////////////////
-
-# Renaming + reformatting to AEPTCD char for joining purpose.
-colnames(di_Demotions)[1] <- "AEPTCD"
-di_Demotions$AEPTCD <- as.character(di_Demotions$AEPTCD)
-
-# Remaining + reformatting the columns below to be able to reference them in case_when()
-colnames(di_Demotions)[2] <- "DEMOTEDPT"
-di_Demotions$DEMOTEDPT <- as.character(di_Demotions$DEMOTEDPT)
-colnames(di_Demotions)[3] <- "NEWPTCD"
-di_Demotions$NEWPTCD <- as.character(di_Demotions$NEWPTCD)
-colnames(di_Demotions)[4] <- "NEWPT"
-di_Demotions$NEWPT <- as.character(di_Demotions$NEWPT)
-
-# Create an additional variable NEWLLTCD for mapping since AEPTCD will be used for joining
-di_Demotions$NEWLLTCD <- di_Demotions$AEPTCD
-
-# Join to ae dataset to find PTCD match and assign new PT (AEDECOD) and PTCode (AEPTCD) if matches
-ae_uv <- ae %>%
-  left_join(di_Demotions, by="AEPTCD") %>%
-  mutate(
-    AEDECOD = case_when(
-      !is.na(`NEWPT`) ~ as.character(`NEWPT`),
-      TRUE ~ AEDECOD
-    ),
-    AEPTCD = case_when(
-      !is.na(`NEWPTCD`) ~ as.character(`NEWPTCD`),
-      TRUE ~ AEPTCD
-    ),
-    AELLTCD = case_when(
-      !is.na(`NEWLLTCD`) ~ as.character(`NEWLLTCD`),
-      TRUE ~ AELLTCD
-    ),
-    AELLT = case_when(
-      !is.na(`DEMOTEDPT`) ~ as.character(`DEMOTEDPT`),
-      TRUE ~ AELLT
-    )
-  )
-
-# Restore ae variable names
-ae_uv <- ae_uv %>%
-  select(names(ae))
-# Restore labels
-for (var in names(ae_uv)) {
-  attr(ae_uv[[var]], "label") <- attr(ae[[var]], "label")
+  df
 }
 
 # //////////////////////////////////////////////////////////////////////////////
-## Updating the AE dataset from the 'LLTs under different PTs' Sheet ////////////
+## Updating the AE dataset from the 'Promotions' Sheet /////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
-# Renaming + reformatting to AELLTCD char for joining purpose.
+di_Promotions$`Promoted LLT Code` <- as.character(di_Promotions$`Promoted LLT Code`)
+
+di_Promotions <- di_Promotions %>%
+  mutate(`Promoted LLT Code` = as.character(`Promoted LLT Code`)) %>%
+  arrange(`Promoted LLT Code`) %>%
+  distinct(`Promoted LLT Code`, .keep_all = TRUE)
+
+ae_uv_1 <- ae %>%
+  left_join(di_Promotions, by = c("AELLTCD" = "Promoted LLT Code"), keep = TRUE) %>%
+  mutate(
+    AEDECOD = case_when(
+      !is.na(`Promoted LLT`) ~ as.character(`Promoted LLT`),
+      TRUE ~ AEDECOD
+    ),
+    AEPTCD = case_when(
+      !is.na(`Promoted LLT Code`) ~ as.character(`Promoted LLT Code`),
+      TRUE ~ AEPTCD
+    )
+  ) %>%
+  select(names(ae)) %>%
+  log_n("after Promotions")
+
+# Restore labels
+for (var in names(ae_uv_1)) {
+  attr(ae_uv_1[[var]], "label") <- attr(ae[[var]], "label")
+}
+
+# //////////////////////////////////////////////////////////////////////////////
+## Updating the AE dataset from the 'Demotions' Sheet //////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+
+# Validate expected minimum structure
+if (ncol(di_Demotions) < 4) {
+  stop("Demotions sheet has unexpected structure (less than 4 columns).")
+}
+
+# Extract columns by position (stable per MVAT layout definition)
+di_Demotions <- tibble(
+  `Demoted PT Code` = as.character(di_Demotions[[1]]),
+  `Demoted PT`      = as.character(di_Demotions[[2]]),
+  `New PT Code`     = as.character(di_Demotions[[3]]),
+  `New PT`          = as.character(di_Demotions[[4]])
+)
+
+# Ensure there are no duplicate key values which could lead to creation of records
+di_Demotions <- di_Demotions %>%
+  arrange(`Demoted PT Code`) %>%
+  distinct(`Demoted PT Code`, .keep_all = TRUE)
+
+ae_uv_2 <- ae_uv_1 %>%
+  mutate(old_AEPTCD = AEPTCD) %>%
+  left_join(di_Demotions, by = c("AEPTCD" = "Demoted PT Code")) %>%
+  mutate(
+    demotion_hit = !is.na(`New PT Code`) | !is.na(`New PT`),
+    
+    # Update PT for all records under the demoted PT
+    AEDECOD = if_else(demotion_hit, as.character(`New PT`),      as.character(AEDECOD)),
+    AEPTCD  = if_else(demotion_hit, as.character(`New PT Code`), as.character(AEPTCD)),
+    
+    # Update LLT ONLY if the record used the PT-term LLT (primary LLT)
+    AELLT = if_else(
+      demotion_hit & as.character(AELLTCD) == as.character(old_AEPTCD),
+      as.character(`Demoted PT`),
+      as.character(AELLT)
+    ),
+    
+    # Preserve LLT code as original PT code
+    AELLTCD = if_else(
+      demotion_hit & as.character(AELLTCD) == as.character(old_AEPTCD),
+      as.character(old_AEPTCD),
+      as.character(AELLTCD)
+    )
+  ) %>%
+  select(-old_AEPTCD, -demotion_hit) %>%
+  select(names(ae)) %>%
+  log_n("after Demotions")
+
+# Restore labels
+for (var in names(ae_uv_2)) {
+  attr(ae_uv_2[[var]], "label") <- attr(ae[[var]], "label")
+}
+
+# //////////////////////////////////////////////////////////////////////////////
+## Updating the AE dataset from the 'LLTs under different PTs' Sheet ///////////
+# //////////////////////////////////////////////////////////////////////////////
+
+di_LLTs_under_diff_PTs <- di_LLTs_under_diff_PTs %>%
+  mutate(`LLT Code` = as.character(`LLT Code`)) %>%
+  arrange(`LLT Code`) %>%
+  distinct(`LLT Code`, .keep_all = TRUE)
+
+# We rely on column positions (stable MVAT layout), so validate the minimum needed columns exist.
+if (ncol(di_LLTs_under_diff_PTs) < 6) {
+  stop("'LLTs under different PTs' sheet has unexpected structure (less than 6 columns).")
+}
+
+# Rename + reformat to match downstream references
 colnames(di_LLTs_under_diff_PTs)[1] <- "AELLTCD"
 di_LLTs_under_diff_PTs$AELLTCD <- as.character(di_LLTs_under_diff_PTs$AELLTCD)
 
-# Remaining + reformatting the columns below to be able to reference them in case_when()
 colnames(di_LLTs_under_diff_PTs)[5] <- "NEWPTCD"
 di_LLTs_under_diff_PTs$NEWPTCD <- as.character(di_LLTs_under_diff_PTs$NEWPTCD)
+
 colnames(di_LLTs_under_diff_PTs)[6] <- "NEWPT"
 di_LLTs_under_diff_PTs$NEWPT <- as.character(di_LLTs_under_diff_PTs$NEWPT)
 
-# Join to ae dataset to find LLTCD match and assign new PT (AEDECOD) and PTCode (AEPTCD) if matches
-ae_uv <- ae %>%
+ae_uv_3 <- ae_uv_2 %>%
   left_join(di_LLTs_under_diff_PTs, by="AELLTCD") %>%
   mutate(
     AEDECOD = case_when(
-      !is.na(`NEWPT`) ~ as.character(`NEWPT`),
+      !is.na(NEWPT) ~ as.character(NEWPT),
       TRUE ~ AEDECOD
     ),
     AEPTCD = case_when(
-      !is.na(`NEWPTCD`) ~ as.character(`NEWPTCD`),
+      !is.na(NEWPTCD) ~ as.character(NEWPTCD),
       TRUE ~ AEPTCD
     )
-  )
+  ) %>%
+  select(names(ae)) %>%
+  log_n("LLTs under different PTs")
 
-# Restore ae variable names
-ae_uv <- ae_uv %>%
-  select(names(ae))
 # Restore labels
-for (var in names(ae_uv)) {
-  attr(ae_uv[[var]], "label") <- attr(ae[[var]], "label")
+for (var in names(ae_uv_3)) {
+  attr(ae_uv_3[[var]], "label") <- attr(ae[[var]], "label")
 }
 
 
 # //////////////////////////////////////////////////////////////////////////////
-## Updating the AE dataset from the 'LLT SOC Changes' Sheet /////////////////////
+## MedDRA Term Name Changes (LLT + PT) /////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
-# Keep only the records on di_LLT_SOC_Changes where Change Type = "Primary SOC Change"
-di_LLT_SOC_Changes <- subset(di_LLT_SOC_Changes,`Change Type` == "Primary SOC Change")
-
-# Renaming + reformatting to AELLTCD char for joining purpose.
-colnames(di_LLT_SOC_Changes)[2] <- "AELLTCD"
-di_LLT_SOC_Changes$AELLTCD <- as.character(di_LLT_SOC_Changes$AELLTCD)
-
-# Remaining + reformatting the columns below to be able to reference them in case_when()
-colnames(di_LLT_SOC_Changes)[11] <- "NEWSOCCD"
-di_LLT_SOC_Changes$NEWSOCCD <- as.character(di_LLT_SOC_Changes$NEWSOCCD)
-colnames(di_LLT_SOC_Changes)[12] <- "NEWSOC"
-di_LLT_SOC_Changes$NEWSOC <- as.character(di_LLT_SOC_Changes$NEWSOC)
-
-# Join to ae dataset to find LLTCD match and assign new SOC (AESOC) and SOC Code (AESOCCD) if matches
-ae_uv <- ae %>%
-  left_join(di_LLT_SOC_Changes, by="AELLTCD") %>%
-  mutate(
-    AESOC = case_when(
-      !is.na(`NEWSOC`) ~ as.character(`NEWSOC`),
-      TRUE ~ AESOC
-    ),
-    AESOCCD = case_when(
-      !is.na(`NEWSOCCD`) ~ as.character(`NEWSOCCD`),
-      TRUE ~ AESOCCD
-    )
-  )
-
-# Restore ae variable names
-ae_uv <- ae_uv %>%
-  select(names(ae))
-# Restore labels
-for (var in names(ae_uv)) {
-  attr(ae_uv[[var]], "label") <- attr(ae[[var]], "label")
-}
-
-
-# //////////////////////////////////////////////////////////////////////////////
-## Updating the AE dataset from the 'PT SOC Changes' Sheet //////////////////////
-# //////////////////////////////////////////////////////////////////////////////
-
-# Keep only the records on di_LLT_SOC_Changes where Change Type = "Primary SOC Change"
-di_PT_SOC_Changes <- subset(di_PT_SOC_Changes,`Change Type` == "Primary SOC Change")
-
-# Renaming + reformatting to AELLTCD char for joining purpose.
-colnames(di_PT_SOC_Changes)[2] <- "AEPTCD"
-di_PT_SOC_Changes$AEPTCD <- as.character(di_PT_SOC_Changes$AEPTCD)
-
-# Remaining + reformatting the columns below to be able to reference them in case_when()
-colnames(di_PT_SOC_Changes)[7] <- "NEWSOCCD"
-di_PT_SOC_Changes$NEWSOCCD <- as.character(di_PT_SOC_Changes$NEWSOCCD)
-colnames(di_PT_SOC_Changes)[8] <- "NEWSOC"
-di_PT_SOC_Changes$NEWSOC <- as.character(di_PT_SOC_Changes$NEWSOC)
-
-# Join to ae dataset to find LLTCD match and assign new SOC (AESOC) and SOC Code (AESOCCD) if matches
-ae_uv <- ae %>%
-  left_join(di_PT_SOC_Changes, by="AEPTCD") %>%
-  mutate(
-    AESOC = case_when(
-      !is.na(`NEWSOC`) ~ as.character(`NEWSOC`),
-      TRUE ~ AESOC
-    ),
-    AESOCCD = case_when(
-      !is.na(`NEWSOCCD`) ~ as.character(`NEWSOCCD`),
-      TRUE ~ AESOCCD
-    )
-  )
-
-# Restore ae variable names
-ae_uv <- ae_uv %>%
-  select(names(ae))
-# Restore labels
-for (var in names(ae_uv)) {
-  attr(ae_uv[[var]], "label") <- attr(ae[[var]], "label")
-}
-
-
-# //////////////////////////////////////////////////////////////////////////////
-## Updating the AE dataset from the 'MedDRA Term Name Changes' Sheet ////////////
-# //////////////////////////////////////////////////////////////////////////////
-
-# Remaining + reformatting the columns for the NEWTERM to be able to reference them in case_when()
-# Below, NEWTERM is referenced to find new LLT, PT, HLT, HLGT and SOC
-
+# Use column position for NEWTERM to avoid version-dependent headers
 colnames(di_MedDRA_Term_Name_Changes)[3] <- "NEWTERM"
 di_MedDRA_Term_Name_Changes$NEWTERM <- as.character(di_MedDRA_Term_Name_Changes$NEWTERM)
 
+# LLT //////////////////////////////////////////////////////////////////////////
 
-# LLT ///////////////////////
+di_MedDRA_Term_Name_Changes_llt <- subset(
+  di_MedDRA_Term_Name_Changes,
+  di_MedDRA_Term_Name_Changes[[4]] == "LLT"
+)
 
-# Renaming + reformatting to AELLTCD char for joining purpose.
-colnames(di_MedDRA_Term_Name_Changes)[1] <- "AELLTCD"
-di_MedDRA_Term_Name_Changes$AELLTCD <- as.character(di_MedDRA_Term_Name_Changes$AELLTCD)
+di_MedDRA_Term_Name_Changes_llt <- di_MedDRA_Term_Name_Changes_llt %>%
+  mutate(`MedDRA Code` = as.character(`MedDRA Code`)) %>%
+  arrange(`MedDRA Code`) %>%
+  distinct(`MedDRA Code`, .keep_all = TRUE)
 
-# Join to ae dataset to find PTCD match and assign new Term (AELLTCD) if matches
-ae_uv <- ae %>%
-  left_join(di_MedDRA_Term_Name_Changes, by="AELLTCD") %>%
+ae_uv_4 <- ae_uv_3 %>%
+  left_join(di_MedDRA_Term_Name_Changes_llt, by= c("AELLTCD"="MedDRA Code"), keep=TRUE) %>%
   mutate(
     AELLT = case_when(
-      !is.na(`NEWTERM`) ~ as.character(`NEWTERM`),
+      !is.na(NEWTERM) ~ as.character(NEWTERM),
       TRUE ~ AELLT
     )
-  )
+  ) %>%
+  select(names(ae)) %>%
+  log_n("MedDRA Term Name Changes (LLT)")
 
-
-# PT ///////////////////////
-
-# Renaming + reformatting to AEPTCD char for joining purpose.
-colnames(di_MedDRA_Term_Name_Changes)[1] <- "AEPTCD"
-di_MedDRA_Term_Name_Changes$AEPTCD <- as.character(di_MedDRA_Term_Name_Changes$AEPTCD)
-
-# Join to ae dataset to find PTCD match and assign new Term (AEPTCD) if matches
-ae_uv <- ae %>%
-  left_join(di_MedDRA_Term_Name_Changes, by="AEPTCD") %>%
-  mutate(
-    AEDECOD = case_when(
-      !is.na(`NEWTERM`) ~ as.character(`NEWTERM`),
-      TRUE ~ AEDECOD
-    )
-  )
-
-
-# HLT //////////////////////// 
-
-# Renaming + reformatting to AEHLTCD char for joining purpose.
-colnames(di_MedDRA_Term_Name_Changes)[1] <- "AEHLTCD"
-di_MedDRA_Term_Name_Changes$AEHLTCD <- as.character(di_MedDRA_Term_Name_Changes$AEHLTCD)
-
-# Join to ae dataset to find PTCD match and assign new Term (AEPTCD) if matches
-ae_uv <- ae %>%
-  left_join(di_MedDRA_Term_Name_Changes, by="AEHLTCD") %>%
-  mutate(
-    AEHLT = case_when(
-      !is.na(`NEWTERM`) ~ as.character(`NEWTERM`),
-      TRUE ~ AEHLT
-    )
-  )
-
-
-# HLGT ///////////////////////
-
-# Renaming + reformatting to AEHLGTCD char for joining purpose.
-colnames(di_MedDRA_Term_Name_Changes)[1] <- "AEHLGTCD"
-di_MedDRA_Term_Name_Changes$AEHLGTCD <- as.character(di_MedDRA_Term_Name_Changes$AEHLGTCD)
-
-# Join to ae dataset to find PTCD match and assign new Term (AEPTCD) if matches
-ae_uv <- ae %>%
-  left_join(di_MedDRA_Term_Name_Changes, by="AEHLGTCD") %>%
-  mutate(
-    AEHLGT = case_when(
-      !is.na(`NEWTERM`) ~ as.character(`NEWTERM`),
-      TRUE ~ AEHLGT
-    )
-  )
-
-
-# SOC ////////////////////////
-
-# Renaming + reformatting to AEHLGTCD char for joining purpose.
-colnames(di_MedDRA_Term_Name_Changes)[1] <- "AESOCCD"
-di_MedDRA_Term_Name_Changes$AESOCCD <- as.character(di_MedDRA_Term_Name_Changes$AESOCCD)
-
-# Join to ae dataset to find PTCD match and assign new Term (AEPTCD) if matches
-ae_uv <- ae %>%
-  left_join(di_MedDRA_Term_Name_Changes, by="AESOCCD") %>%
-  mutate(
-    AESOC = case_when(
-      !is.na(`NEWTERM`) ~ as.character(`NEWTERM`),
-      TRUE ~ AESOC
-    )
-  )
-
-# //////////////////////////////////////////////////////////////////////////////
-## FINALIZE UPVERSIONED DATASET  ////////////////////////////////////////////////
-# //////////////////////////////////////////////////////////////////////////////
-
-# RESTORE AE VARIABLES //////////////
-
-# Restore ae variable names
-ae_uv <- ae_uv %>%
-  select(names(ae))
 # Restore labels
-for (var in names(ae_uv)) {
-  attr(ae_uv[[var]], "label") <- attr(ae[[var]], "label")
+for (var in names(ae_uv_4)) {
+  attr(ae_uv_4[[var]], "label") <- attr(ae[[var]], "label")
 }
 
-# Write the final up-versionned ae dataset in SAS format (.sas7bdat) to the output folder
-write_sas(ae_uv, sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/ae_uv_%s.sas7bdat",Sys.Date()))
+# PT ///////////////////////////////////////////////////////////////////////////
 
+di_MedDRA_Term_Name_Changes_pt <- subset(
+  di_MedDRA_Term_Name_Changes,
+  di_MedDRA_Term_Name_Changes[[4]] == "PT"
+)
+
+di_MedDRA_Term_Name_Changes_pt <- di_MedDRA_Term_Name_Changes_pt %>%
+  mutate(`MedDRA Code` = as.character(`MedDRA Code`)) %>%
+  arrange(`MedDRA Code`) %>%
+  distinct(`MedDRA Code`, .keep_all = TRUE)
+
+ae_uv_5 <- ae_uv_4 %>%
+  left_join(di_MedDRA_Term_Name_Changes_pt, by= c("AEPTCD"="MedDRA Code"), keep=TRUE) %>%
+  mutate(
+    AEDECOD = case_when(
+      !is.na(NEWTERM) ~ as.character(NEWTERM),
+      TRUE ~ AEDECOD
+    )
+  ) %>%
+  select(names(ae)) %>%
+  log_n("MedDRA Term Name Changes (PT)")
+
+# Restore labels
+for (var in names(ae_uv_5)) {
+  attr(ae_uv_5[[var]], "label") <- attr(ae[[var]], "label")
+}
 
 # //////////////////////////////////////////////////////////////////////////////
-## Compare original ae vs up-versionned ae datasets an create report ////////////
+## Rebuild hierarchy (hlt, hlgt, soc) using target mdhier.asc file /////////////
 # //////////////////////////////////////////////////////////////////////////////
 
-comparison <- comparedf(ae, ae_uv)
+ae_uv_6 <- ae_uv_5 %>%
+  left_join(
+    MedDRA_mdhier %>% select(PTCD, HLT, HLTCD, HLGT, HLGTCD, SOC, SOCCD),
+    by = c("AEPTCD" = "PTCD"),
+    keep = TRUE
+  ) %>%
+  mutate(
+    AEHLT    = if_else(!is.na(HLT),    as.character(HLT),    as.character(AEHLT)),
+    AEHLTCD  = if_else(!is.na(HLTCD),  as.character(HLTCD),  as.character(AEHLTCD)),
+    AEHLGT   = if_else(!is.na(HLGT),   as.character(HLGT),   as.character(AEHLGT)),
+    AEHLGTCD = if_else(!is.na(HLGTCD), as.character(HLGTCD), as.character(AEHLGTCD)),
+    AESOC    = if_else(!is.na(SOC),    as.character(SOC),    as.character(AESOC)),
+    AESOCCD  = if_else(!is.na(SOCCD),  as.character(SOCCD),  as.character(AESOCCD))
+  ) %>%
+  select(names(ae)) %>%
+  log_n("after Hierarchy Rebuild")
+
+# Restore labels
+for (var in names(ae_uv_6)) {
+  attr(ae_uv_6[[var]], "label") <- attr(ae[[var]], "label")
+}
+
+# //////////////////////////////////////////////////////////////////////////////
+# UPDATE the MedDRA Version value in the AE data
+# //////////////////////////////////////////////////////////////////////////////
+ae_uv_6 <- ae_uv_6 %>%
+  mutate(AETERM_CoderDictVersion = TARGET_MEDDRA_VERSION)
+
+# //////////////////////////////////////////////////////////////////////////////
+## Write upversioned ae dataset in SAS format //////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+
+write_sas(
+  ae_uv_6,
+  sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/ae_uv_%s.sas7bdat", Sys.Date())
+)
+
+# //////////////////////////////////////////////////////////////////////////////
+## Compare original ae vs up-versionned ae datasets and create report ///////////
+# //////////////////////////////////////////////////////////////////////////////
+
+comparison <- comparedf(ae, ae_uv_6)
 summary_output <- summary(comparison)
 diff_table <- summary_output$diffs.table
 
-# Convert to character if values are complex or factors
 diff_table <- diff_table %>%
-  mutate(values.x = as.character(values.x),
-         values.y = as.character(values.y))
+  mutate(
+    values.x = as.character(values.x),
+    values.y = as.character(values.y)
+  )
 
-# Create report in excel format
-# Update url to point to your outpur folder
-write_xlsx(diff_table, sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/ae_upversion_compare_%s.xlsx",Sys.Date()))
+write_xlsx(
+  diff_table,
+  sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/ae_upversion_compare_%s.xlsx", Sys.Date())
+)
 
-# View summary
 summary(comparison)
-
-# View detailed differences
 print(comparison)
 
+# //////////////////////////////////////////////////////////////////////////////
+## Rowcount audit //////////////////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
 
-# /////////////////////////////////////////////////////////////////////////////
+if (any(row_audit$n != row_audit$n[1])) {
+  warning("Row count changed during processing. Review rowcount audit.")
+}
+
+write_xlsx(
+  row_audit,
+  sprintf("C:/Users/ad905068/OneDrive - BioMarin/Documents/R_for_BMRN/output/rowcount_audit_%s.xlsx", Sys.Date())
+)
+
+# Add check if Code Switches sheet is not blank.
+if (nrow(di_MedDRA_Code_Switches) > 0) {
+  warning("Code Switches sheet contains rows but is not processed.")
+}
+
 # /////////////////////////////////////////////////////////////////////////////
 # END OF THE CODE /////////////////////////////////////////////////////////////
 # /////////////////////////////////////////////////////////////////////////////
-# /////////////////////////////////////////////////////////////////////////////
-
-
